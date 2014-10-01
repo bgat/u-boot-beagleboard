@@ -195,7 +195,7 @@
 	"bootenv=uEnv.txt\0" \
 	"loadbootenv=fatload mmc ${mmcdev} ${loadaddr} ${bootenv}\0" \
 	"importbootenv=echo Importing environment from mmc ...; " \
-		"env import -t -r $loadaddr $filesize\0" \
+		"env import -t $loadaddr $filesize\0" \
 	"ramargs=setenv bootargs console=${console} " \
 		"${optargs} " \
 		"mpurate=${mpurate} " \
@@ -224,33 +224,42 @@
 	"userbutton=if gpio input 173; then run userbutton_xm; " \
 		"else run userbutton_nonxm; fi;\0" \
 	"userbutton_xm=gpio input 4;\0" \
-	"userbutton_nonxm=gpio input 7;\0"
+	"userbutton_nonxm=gpio input 7;\0" \
+	"loadbootscript=load mmc ${mmcdev} ${loadaddr} boot.scr\0" \
+	"bootscript=echo Running boot script from mmc ...; " \
+		"source ${loadaddr}\0"
+
 /* "run userbutton" will return 1 (false) if pressed and 0 (true) if not */
 #define CONFIG_BOOTCOMMAND \
+	"mmc dev ${mmcdev}; " \
+	"if mmc rescan; then " \
+		"if run loadbootscript; then " \
+			"run bootscript; " \
+		"fi; "\
 	"run findfdt; " \
 	"mmc dev ${mmcdev}; if mmc rescan; then " \
 		"if run userbutton; then " \
-			"setenv bootenv uEnv.txt;" \
+			"setenv bootenv uEnv.txt; " \
 		"else " \
-			"setenv bootenv user.txt;" \
-		"fi;" \
-		"echo SD/MMC found on device ${mmcdev};" \
+			"setenv bootenv user.txt; " \
+		"fi; " \
+		"echo SD/MMC found on device ${mmcdev}; " \
 		"if run loadbootenv; then " \
-			"echo Loaded environment from ${bootenv};" \
-			"run importbootenv;" \
-		"fi;" \
+			"echo Loaded environment from ${bootenv}; " \
+			"run importbootenv; " \
+		"fi; " \
 		"if test -n $uenvcmd; then " \
-			"echo Running uenvcmd ...;" \
-			"run uenvcmd;" \
-		"fi;" \
+			"echo Running uenvcmd ...; " \
+			"run uenvcmd; " \
+		"fi; " \
 		"if run loadimage; then " \
-			"run mmcboot;" \
-		"fi;" \
-	"fi;" \
-	"run nandboot;" \
-	"setenv bootfile zImage;" \
+			"run mmcboot; " \
+		"fi; " \
+	"fi; " \
+	"run nandboot; " \
+	"setenv bootfile zImage; " \
 	"if run loadimage; then " \
-		"run loadfdt;" \
+		"run loadfdt; " \
 		"run mmcbootz; " \
 	"fi; " \
 
@@ -266,8 +275,13 @@
  */
 
 /* **** PISMO SUPPORT *** */
+
+/* Configure the PISMO */
+#define PISMO1_NAND_SIZE		GPMC_SIZE_128M
+#define PISMO1_ONEN_SIZE		GPMC_SIZE_128M
+
 #if defined(CONFIG_CMD_NAND)
-#define CONFIG_SYS_FLASH_BASE		NAND_BASE
+#define CONFIG_SYS_FLASH_BASE		PISMO1_NAND_BASE
 #endif
 
 /* Monitor at start of flash */
@@ -304,11 +318,5 @@
 #define CONFIG_SYS_NAND_ECCBYTES	3
 #define CONFIG_NAND_OMAP_ECCSCHEME	OMAP_ECC_HAM1_CODE_HW
 #define CONFIG_SYS_NAND_U_BOOT_OFFS	0x80000
-/* NAND: SPL falcon mode configs */
-#ifdef CONFIG_SPL_OS_BOOT
-#define CONFIG_CMD_SPL_NAND_OFS		0x240000
-#define CONFIG_SYS_NAND_SPL_KERNEL_OFFS	0x280000
-#define CONFIG_CMD_SPL_WRITE_SIZE	0x2000
-#endif
 
 #endif /* __CONFIG_H */
